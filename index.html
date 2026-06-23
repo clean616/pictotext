@@ -466,6 +466,14 @@
     </div>
 
     <div class="toggle-row">
+      <span class="toggle-label">자동 대비</span>
+      <label class="toggle">
+        <input type="checkbox" id="chk-autocontrast" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
       <span class="toggle-label">반전</span>
       <label class="toggle">
         <input type="checkbox" id="chk-invert">
@@ -558,8 +566,9 @@ const videoEl      = document.getElementById('webcam-video');
 const toast        = document.getElementById('toast');
 const selCols      = document.getElementById('sel-cols');
 const selCharset   = document.getElementById('sel-charset');
-const chkColor     = document.getElementById('chk-color');
-const chkInvert    = document.getElementById('chk-invert');
+const chkColor        = document.getElementById('chk-color');
+const chkInvert       = document.getElementById('chk-invert');
+const chkAutoContrast = document.getElementById('chk-autocontrast');
 const rngBrightness= document.getElementById('rng-brightness');
 const rngContrast  = document.getElementById('rng-contrast');
 const statusLabel  = document.getElementById('status-label');
@@ -585,10 +594,39 @@ function calcDimensions(imgW, imgH, cols) {
   return { cols, rows };
 }
 
+// ── Auto contrast (histogram stretching) ───────────────
+function computeLuminanceRange(data, width, height) {
+  let minL = 255, maxL = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    const l = getLuminance(data[i], data[i+1], data[i+2]);
+    if (l < minL) minL = l;
+    if (l > maxL) maxL = l;
+  }
+  return { minL, maxL };
+}
+
 // ── Core ASCII converter ───────────────────────────────
-function imageDataToAscii(imageData, cols, rows, charset, invert, brightness, contrast) {
+function imageDataToAscii(imageData, cols, rows, charset, invert, brightness, contrast, autoContrast) {
   const chars = CHARSETS[charset];
   const { width, height, data } = imageData;
+
+  // 자동 대비: 실제 밝기 범위를 0~255로 스트레칭
+  let lumMin = 0, lumMax = 255;
+  if (autoContrast) {
+    const { minL, maxL } = computeLuminanceRange(data, width, height);
+    // 상하 1% 클리핑으로 극단값 무시 (노이즈 방지)
+    const total = (width * height);
+    const clip = total * 0.01;
+    const hist = new Float32Array(256);
+    for (let i = 0; i < data.length; i += 4) {
+      hist[Math.round(getLuminance(data[i], data[i+1], data[i+2]))]++;
+    }
+    let acc = 0;
+    for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= clip) { lumMin = v; break; } }
+    acc = 0;
+    for (let v = 255; v >= 0; v--) { acc += hist[v]; if (acc >= clip) { lumMax = v; break; } }
+    if (lumMax <= lumMin) { lumMin = minL; lumMax = maxL; }
+  }
 
   const lines = [];
   const colorRows = [];
@@ -598,20 +636,44 @@ function imageDataToAscii(imageData, cols, rows, charset, invert, brightness, co
     const colorChars = [];
     const colorValues = [];
 
+    // 셀 경계 (픽셀 단위)
+    const y0 = Math.floor((row / rows) * height);
+    const y1 = Math.floor(((row + 1) / rows) * height);
+
     for (let col = 0; col < cols; col++) {
-      const srcX = Math.floor((col / cols) * width);
-      const srcY = Math.floor((row / rows) * height);
-      const i = (srcY * width + srcX) * 4;
+      const x0 = Math.floor((col / cols) * width);
+      const x1 = Math.floor(((col + 1) / cols) * width);
+
+      // 셀 내 모든 픽셀 평균 (박스 샘플링)
+      let rSum = 0, gSum = 0, bSum = 0, count = 0;
+      for (let py = y0; py < y1; py++) {
+        for (let px = x0; px < x1; px++) {
+          const i = (py * width + px) * 4;
+          rSum += data[i];
+          gSum += data[i + 1];
+          bSum += data[i + 2];
+          count++;
+        }
+      }
+      // 셀이 1픽셀 미만이면 단일 픽셀 fallback
+      if (count === 0) {
+        const i = (y0 * width + x0) * 4;
+        rSum = data[i]; gSum = data[i+1]; bSum = data[i+2]; count = 1;
+      }
 
       let [r, g, b] = applyBrightnessContrast(
-        data[i], data[i+1], data[i+2],
+        rSum / count, gSum / count, bSum / count,
         brightness, contrast
       );
 
       let lum = getLuminance(r, g, b);
-      const normalized = invert ? 1 - lum / 255 : lum / 255;
+      // 자동 대비 스트레칭 적용
+      const stretched = lumMax > lumMin
+        ? Math.max(0, Math.min(255, (lum - lumMin) / (lumMax - lumMin) * 255))
+        : lum;
+      const normalized = invert ? 1 - stretched / 255 : stretched / 255;
       const idx = Math.floor(normalized * (chars.length - 1));
-      const ch = chars[idx] === ' ' ? '\u00a0' : chars[idx]; // non-breaking space
+      const ch = chars[idx] === ' ' ? '\u00a0' : chars[idx];
 
       line += chars[idx] === ' ' ? ' ' : chars[idx];
       colorChars.push(ch);
@@ -673,12 +735,13 @@ function convert(imgEl) {
   const cols = parseInt(selCols.value);
   const { rows } = calcDimensions(imgEl.naturalWidth || imgEl.width, imgEl.naturalHeight || imgEl.height, cols);
   const imageData = resizeImageData(imgEl, cols, rows);
-  const brightness = parseInt(rngBrightness.value);
-  const contrast   = parseInt(rngContrast.value);
-  const charset    = selCharset.value;
-  const invert     = chkInvert.checked;
+  const brightness   = parseInt(rngBrightness.value);
+  const contrast     = parseInt(rngContrast.value);
+  const charset      = selCharset.value;
+  const invert       = chkInvert.checked;
+  const autoContrast = chkAutoContrast.checked;
 
-  const { text, colorRows } = imageDataToAscii(imageData, cols, rows, charset, invert, brightness, contrast);
+  const { text, colorRows } = imageDataToAscii(imageData, cols, rows, charset, invert, brightness, contrast, autoContrast);
 
   currentAsciiText = text;
   currentColorData = colorRows;
@@ -746,7 +809,7 @@ async function startWebcam() {
         const resized = resizeFromImageData(imageData, 640, 480, cols, rows);
         const brightness = parseInt(rngBrightness.value);
         const contrast   = parseInt(rngContrast.value);
-        const { text, colorRows } = imageDataToAscii(resized, cols, rows, selCharset.value, chkInvert.checked, brightness, contrast);
+        const { text, colorRows } = imageDataToAscii(resized, cols, rows, selCharset.value, chkInvert.checked, brightness, contrast, chkAutoContrast.checked);
 
         currentAsciiText = text;
         currentColorData = colorRows;
@@ -778,13 +841,34 @@ function resizeFromImageData(imageData, srcW, srcH, dstW, dstH) {
 
 // Need to accept canvas element too
 function resizeImageData(imgOrCanvas, cols, rows) {
-  const canvas = document.createElement('canvas');
-  canvas.width = cols;
-  canvas.height = rows;
-  const ctx = canvas.getContext('2d');
+  // 큰 이미지는 단계적으로 축소해서 품질 향상 (한번에 1/2 이상 축소시 계단 현상)
+  const srcW = imgOrCanvas.naturalWidth || imgOrCanvas.width;
+  const srcH = imgOrCanvas.naturalHeight || imgOrCanvas.height;
+
+  let cur = document.createElement('canvas');
+  cur.width = srcW;
+  cur.height = srcH;
+  cur.getContext('2d').drawImage(imgOrCanvas, 0, 0);
+
+  let w = srcW, h = srcH;
+  while (w > cols * 2 || h > rows * 2) {
+    w = Math.max(Math.floor(w / 2), cols);
+    h = Math.max(Math.floor(h / 2), rows);
+    const step = document.createElement('canvas');
+    step.width = w; step.height = h;
+    const ctx = step.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(cur, 0, 0, w, h);
+    cur = step;
+  }
+
+  const final = document.createElement('canvas');
+  final.width = cols; final.height = rows;
+  const ctx = final.getContext('2d');
   ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'medium';
-  ctx.drawImage(imgOrCanvas, 0, 0, cols, rows);
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(cur, 0, 0, cols, rows);
   return ctx.getImageData(0, 0, cols, rows);
 }
 
@@ -843,7 +927,7 @@ function exportThermal(preset) {
   if (currentImageEl) {
     const { rows } = calcDimensions(currentImageEl.naturalWidth, currentImageEl.naturalHeight, cols);
     const imageData = resizeImageData(currentImageEl, cols, rows);
-    const { text: t } = imageDataToAscii(imageData, cols, rows, selCharset.value, chkInvert.checked, parseInt(rngBrightness.value), parseInt(rngContrast.value));
+    const { text: t } = imageDataToAscii(imageData, cols, rows, selCharset.value, chkInvert.checked, parseInt(rngBrightness.value), parseInt(rngContrast.value), chkAutoContrast.checked);
     text = t;
   }
 
@@ -920,6 +1004,7 @@ function reconvert() {
 selCols.addEventListener('change', reconvert);
 selCharset.addEventListener('change', reconvert);
 chkInvert.addEventListener('change', reconvert);
+chkAutoContrast.addEventListener('change', reconvert);
 rngBrightness.addEventListener('input', () => {
   document.getElementById('brightness-val').textContent = rngBrightness.value;
   reconvert();
