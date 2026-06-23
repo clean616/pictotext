@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASCII ART</title>
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --surface: #161616;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --accent: #00ff88;
+    --accent-dim: #00cc66;
+    --text: #d4d4d4;
+    --text-muted: #666;
+    --danger: #ff4444;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Courier New', Courier, monospace;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .sidebar-header {
+    padding: 18px 16px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    font-weight: bold;
+  }
+
+  .logo-sub {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 3px;
+    letter-spacing: 1px;
+  }
+
+  .section {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 9px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    text-align: left;
+    margin-bottom: 6px;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn:last-child { margin-bottom: 0; }
+
+  .btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: #001a0d;
+  }
+
+  .btn.danger { border-color: var(--danger); color: var(--danger); }
+  .btn.danger:hover { background: #1a0000; }
+
+  .btn-icon { margin-right: 8px; }
+
+  .field {
+    margin-bottom: 10px;
+  }
+
+  .field:last-child { margin-bottom: 0; }
+
+  .field label {
+    display: block;
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+    letter-spacing: 1px;
+  }
+
+  .field select,
+  .field input[type="range"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 11px;
+    padding: 6px 8px;
+    appearance: none;
+    cursor: pointer;
+  }
+
+  .field select:focus { outline: none; border-color: var(--accent); }
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .toggle-row:last-child { margin-bottom: 0; }
+
+  .toggle-label {
+    font-size: 11px;
+    color: var(--text);
+  }
+
+  .toggle {
+    position: relative;
+    width: 34px;
+    height: 18px;
+  }
+
+  .toggle input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-slider {
+    position: absolute;
+    inset: 0;
+    background: var(--border);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    left: 3px;
+    top: 3px;
+    background: var(--text-muted);
+    transition: transform 0.2s, background 0.2s;
+  }
+
+  .toggle input:checked + .toggle-slider { background: #001a0d; }
+  .toggle input:checked + .toggle-slider::before {
+    transform: translateX(16px);
+    background: var(--accent);
+  }
+
+  .range-val {
+    font-size: 10px;
+    color: var(--accent);
+    margin-top: 3px;
+    text-align: right;
+  }
+
+  /* ── Preview ── */
+  .preview {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  .preview-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+
+  .preview-toolbar span {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+  }
+
+  .toolbar-btn {
+    padding: 5px 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    letter-spacing: 1px;
+  }
+
+  .toolbar-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .toolbar-sep {
+    width: 1px;
+    height: 18px;
+    background: var(--border);
+    margin: 0 4px;
+  }
+
+  .preview-body {
+    flex: 1;
+    overflow: auto;
+    padding: 20px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  #drop-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    border: 1px dashed var(--border);
+    color: var(--text-muted);
+    font-size: 13px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+    user-select: none;
+  }
+
+  #drop-zone:hover,
+  #drop-zone.drag-over {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  #drop-zone .drop-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+  }
+
+  #drop-zone .drop-sub {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    letter-spacing: 2px;
+  }
+
+  #output {
+    display: none;
+    font-family: 'Courier New', Courier, monospace;
+    line-height: 1.15;
+    letter-spacing: 0;
+    white-space: pre;
+    background: transparent;
+  }
+
+  #output.text-mode { font-size: 9px; }
+  #output.color-mode { font-size: 9px; }
+
+  /* webcam overlay */
+  #webcam-video {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 160px;
+    border: 1px solid var(--border);
+    opacity: 0.6;
+    z-index: 10;
+  }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 8px 20px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  #file-input { display: none; }
+
+  /* status bar */
+  .statusbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 5px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    flex-shrink: 0;
+  }
+
+  .statusbar span { color: var(--accent); }
+
+  /* ── Caption ── */
+  .caption-bar {
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  #caption-input {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    padding: 7px 10px;
+    outline: none;
+    transition: border-color 0.15s;
+    resize: none;
+    height: 34px;
+    line-height: 1.4;
+  }
+
+  #caption-input:focus { border-color: var(--accent); }
+  #caption-input::placeholder { color: var(--text-muted); }
+
+  #caption-display {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+    color: var(--text);
+    padding: 10px 0 2px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    letter-spacing: 1px;
+    min-height: 0;
+    display: none;
+  }
+
+  #caption-display.has-text { display: block; }
+
+  .caption-align-btns {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .align-btn {
+    width: 28px;
+    height: 28px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .align-btn:hover, .align-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">ASCII Art</div>
+    <div class="logo-sub">image → text converter</div>
+  </div>
+
+  <!-- Input -->
+  <div class="section">
+    <div class="section-label">Input</div>
+    <button class="btn" id="btn-upload"><span class="btn-icon">↑</span>이미지 업로드</button>
+    <button class="btn" id="btn-webcam"><span class="btn-icon">◉</span>웹캠 시작</button>
+    <input type="file" id="file-input" accept="image/*">
+  </div>
+
+  <!-- Settings -->
+  <div class="section">
+    <div class="section-label">설정</div>
+
+    <div class="field">
+      <label>문자 폭 (컬럼)</label>
+      <select id="sel-cols">
+        <option value="60">60 — 작게</option>
+        <option value="80">80 — 보통</option>
+        <option value="120" selected>120 — 크게</option>
+        <option value="160">160 — 매우 크게</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>문자셋</label>
+      <select id="sel-charset">
+        <option value="standard" selected>Standard</option>
+        <option value="detailed">Detailed</option>
+        <option value="blocks">Blocks ▓░</option>
+        <option value="minimal">Minimal</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>밝기 조정 <span id="brightness-val">0</span></label>
+      <input type="range" id="rng-brightness" min="-100" max="100" value="0">
+    </div>
+
+    <div class="field">
+      <label>대비 <span id="contrast-val">0</span></label>
+      <input type="range" id="rng-contrast" min="-100" max="100" value="0">
+    </div>
+
+    <div class="toggle-row">
+      <span class="toggle-label">컬러 모드</span>
+      <label class="toggle">
+        <input type="checkbox" id="chk-color">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="toggle-row">
+      <span class="toggle-label">반전</span>
+      <label class="toggle">
+        <input type="checkbox" id="chk-invert">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Export -->
+  <div class="section">
+    <div class="section-label">내보내기</div>
+    <button class="btn" id="btn-copy-text"><span class="btn-icon">⎘</span>텍스트 복사</button>
+    <button class="btn" id="btn-copy-html"><span class="btn-icon">⎘</span>HTML 복사</button>
+    <button class="btn" id="btn-58mm"><span class="btn-icon">↓</span>스티커 PNG — 58mm</button>
+    <button class="btn" id="btn-80mm"><span class="btn-icon">↓</span>스티커 PNG — 80mm</button>
+  </div>
+</aside>
+
+<!-- Preview -->
+<main class="preview">
+  <div class="preview-toolbar">
+    <span id="status-label">대기 중</span>
+    <div class="toolbar-sep"></div>
+    <button class="toolbar-btn" id="btn-zoom-in">+</button>
+    <button class="toolbar-btn" id="btn-zoom-out">-</button>
+    <button class="toolbar-btn" id="btn-zoom-reset">reset</button>
+  </div>
+
+  <div class="preview-body" id="preview-body">
+    <div id="drop-zone">
+      <div class="drop-icon">⊕</div>
+      <div>이미지를 드롭하거나 클릭하세요</div>
+      <div class="drop-sub">JPG · PNG · GIF · WEBP</div>
+    </div>
+    <pre id="output"></pre>
+    <div id="caption-display"></div>
+  </div>
+
+  <div class="caption-bar">
+    <textarea id="caption-input" placeholder="캡션 텍스트 입력..." rows="1" spellcheck="false"></textarea>
+    <div class="caption-align-btns">
+      <button class="align-btn active" id="align-left" title="왼쪽 정렬">≡</button>
+      <button class="align-btn" id="align-center" title="가운데 정렬">☰</button>
+      <button class="align-btn" id="align-right" title="오른쪽 정렬">≡</button>
+    </div>
+  </div>
+
+  <div class="statusbar">
+    <div>cols: <span id="stat-cols">—</span></div>
+    <div>rows: <span id="stat-rows">—</span></div>
+    <div>chars: <span id="stat-chars">—</span></div>
+    <div id="stat-mode">mode: text</div>
+  </div>
+</main>
+
+<video id="webcam-video" autoplay muted playsinline></video>
+<div id="toast"></div>
+
+<script>
+// ── Constants ──────────────────────────────────────────
+const CHARSETS = {
+  standard: '@#S%?*+;:,. ',
+  detailed: '$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,"^`\'. ',
+  blocks:   '█▓▒░ ',
+  minimal:  '#. '
+};
+
+const THERMAL_PRESETS = {
+  '58mm': { printablePx: 384, cols: 48, label: '58mm' },
+  '80mm': { printablePx: 576, cols: 72, label: '80mm' }
+};
+
+const FONT_ASPECT = 0.5; // char height:width ratio ≈ 2:1
+
+// ── State ──────────────────────────────────────────────
+let currentImageEl = null;
+let currentAsciiText = '';
+let currentColorData = null; // { rows: [{chars, colors}] }
+let webcamActive = false;
+let webcamStream = null;
+let webcamAnimId = null;
+let webcamLastTime = 0;
+let fontSize = 9;
+
+// ── DOM refs ───────────────────────────────────────────
+const fileInput    = document.getElementById('file-input');
+const dropZone     = document.getElementById('drop-zone');
+const output       = document.getElementById('output');
+const videoEl      = document.getElementById('webcam-video');
+const toast        = document.getElementById('toast');
+const selCols      = document.getElementById('sel-cols');
+const selCharset   = document.getElementById('sel-charset');
+const chkColor     = document.getElementById('chk-color');
+const chkInvert    = document.getElementById('chk-invert');
+const rngBrightness= document.getElementById('rng-brightness');
+const rngContrast  = document.getElementById('rng-contrast');
+const statusLabel  = document.getElementById('status-label');
+
+// ── Helpers ────────────────────────────────────────────
+function getLuminance(r, g, b) {
+  return 0.299 * r + 0.587 * g + 0.114 * b;
+}
+
+function applyBrightnessContrast(r, g, b, brightness, contrast) {
+  // brightness: -100..100, contrast: -100..100
+  const b_ = brightness * 2.55;
+  const c_ = contrast > 0
+    ? (contrast / 100) * 127 + 1
+    : 1 + contrast / 100;
+
+  const adj = (v) => Math.max(0, Math.min(255, (v + b_) * c_));
+  return [adj(r), adj(g), adj(b)];
+}
+
+function calcDimensions(imgW, imgH, cols) {
+  const rows = Math.max(1, Math.floor((imgH / imgW) * cols * FONT_ASPECT));
+  return { cols, rows };
+}
+
+// ── Core ASCII converter ───────────────────────────────
+function imageDataToAscii(imageData, cols, rows, charset, invert, brightness, contrast) {
+  const chars = CHARSETS[charset];
+  const { width, height, data } = imageData;
+
+  const lines = [];
+  const colorRows = [];
+
+  for (let row = 0; row < rows; row++) {
+    let line = '';
+    const colorChars = [];
+    const colorValues = [];
+
+    for (let col = 0; col < cols; col++) {
+      const srcX = Math.floor((col / cols) * width);
+      const srcY = Math.floor((row / rows) * height);
+      const i = (srcY * width + srcX) * 4;
+
+      let [r, g, b] = applyBrightnessContrast(
+        data[i], data[i+1], data[i+2],
+        brightness, contrast
+      );
+
+      let lum = getLuminance(r, g, b);
+      const normalized = invert ? 1 - lum / 255 : lum / 255;
+      const idx = Math.floor(normalized * (chars.length - 1));
+      const ch = chars[idx] === ' ' ? '\u00a0' : chars[idx]; // non-breaking space
+
+      line += chars[idx] === ' ' ? ' ' : chars[idx];
+      colorChars.push(ch);
+      colorValues.push([r, g, b]);
+    }
+    lines.push(line);
+    colorRows.push({ chars: colorChars, colors: colorValues });
+  }
+
+  return { text: lines.join('\n'), colorRows };
+}
+
+function resizeImageData(img, cols, rows) {
+  const canvas = document.createElement('canvas');
+  canvas.width = cols;
+  canvas.height = rows;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'medium';
+  ctx.drawImage(img, 0, 0, cols, rows);
+  return ctx.getImageData(0, 0, cols, rows);
+}
+
+// ── Renderer ───────────────────────────────────────────
+function renderText(text) {
+  output.className = 'text-mode';
+  output.style.fontSize = fontSize + 'px';
+  output.style.color = '#d4d4d4';
+  output.innerHTML = escapeHtml(text);
+}
+
+function renderColor(colorRows) {
+  output.className = 'color-mode';
+  output.style.fontSize = fontSize + 'px';
+  output.style.color = '';
+
+  const lines = colorRows.map(({ chars, colors }) => {
+    return chars.map((ch, i) => {
+      const [r, g, b] = colors[i];
+      return `<span style="color:rgb(${r},${g},${b})">${escapeHtml(ch)}</span>`;
+    }).join('');
+  });
+  output.innerHTML = lines.join('\n');
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function updateStats(cols, rows) {
+  document.getElementById('stat-cols').textContent = cols;
+  document.getElementById('stat-rows').textContent = rows;
+  document.getElementById('stat-chars').textContent = (cols * rows).toLocaleString();
+  document.getElementById('stat-mode').textContent = 'mode: ' + (chkColor.checked ? 'color' : 'text');
+}
+
+// ── Main convert ───────────────────────────────────────
+function convert(imgEl) {
+  const cols = parseInt(selCols.value);
+  const { rows } = calcDimensions(imgEl.naturalWidth || imgEl.width, imgEl.naturalHeight || imgEl.height, cols);
+  const imageData = resizeImageData(imgEl, cols, rows);
+  const brightness = parseInt(rngBrightness.value);
+  const contrast   = parseInt(rngContrast.value);
+  const charset    = selCharset.value;
+  const invert     = chkInvert.checked;
+
+  const { text, colorRows } = imageDataToAscii(imageData, cols, rows, charset, invert, brightness, contrast);
+
+  currentAsciiText = text;
+  currentColorData = colorRows;
+
+  dropZone.style.display = 'none';
+  output.style.display = 'block';
+
+  if (chkColor.checked) {
+    renderColor(colorRows);
+  } else {
+    renderText(text);
+  }
+
+  updateStats(cols, rows);
+  statusLabel.textContent = `${cols}×${rows}`;
+}
+
+// ── Image load ─────────────────────────────────────────
+function loadImageFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    stopWebcam();
+    currentImageEl = img;
+    convert(img);
+    statusLabel.textContent = `${file.name}`;
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
+}
+
+// ── Webcam ─────────────────────────────────────────────
+async function startWebcam() {
+  try {
+    webcamStream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
+    });
+    videoEl.srcObject = webcamStream;
+    videoEl.style.display = 'block';
+    await videoEl.play();
+
+    webcamActive = true;
+    document.getElementById('btn-webcam').textContent = '◉ 웹캠 정지';
+    document.getElementById('btn-webcam').classList.add('active');
+
+    const offscreen = document.createElement('canvas');
+    offscreen.width = 640;
+    offscreen.height = 480;
+    const ctx = offscreen.getContext('2d');
+
+    const tick = (timestamp) => {
+      if (!webcamActive) return;
+      if (timestamp - webcamLastTime >= 1000 / 15) {
+        webcamLastTime = timestamp;
+        ctx.drawImage(videoEl, 0, 0, 640, 480);
+        // Create fake image-like object
+        const fakeImg = { naturalWidth: 640, naturalHeight: 480, width: 640, height: 480 };
+        // Use canvas directly
+        const cols = parseInt(selCols.value);
+        const { rows } = calcDimensions(640, 480, cols);
+        const imageData = ctx.getImageData(0, 0, 640, 480);
+
+        // Need to resize manually for webcam
+        const resized = resizeFromImageData(imageData, 640, 480, cols, rows);
+        const brightness = parseInt(rngBrightness.value);
+        const contrast   = parseInt(rngContrast.value);
+        const { text, colorRows } = imageDataToAscii(resized, cols, rows, selCharset.value, chkInvert.checked, brightness, contrast);
+
+        currentAsciiText = text;
+        currentColorData = colorRows;
+
+        dropZone.style.display = 'none';
+        output.style.display = 'block';
+
+        if (chkColor.checked) renderColor(colorRows);
+        else renderText(text);
+
+        updateStats(cols, rows);
+      }
+      webcamAnimId = requestAnimationFrame(tick);
+    };
+    webcamAnimId = requestAnimationFrame(tick);
+
+  } catch (err) {
+    showToast('웹캠 접근 실패: ' + err.message);
+  }
+}
+
+function resizeFromImageData(imageData, srcW, srcH, dstW, dstH) {
+  const canvas = document.createElement('canvas');
+  canvas.width = srcW;
+  canvas.height = srcH;
+  canvas.getContext('2d').putImageData(imageData, 0, 0);
+  return resizeImageData(canvas, dstW, dstH);
+}
+
+// Need to accept canvas element too
+function resizeImageData(imgOrCanvas, cols, rows) {
+  const canvas = document.createElement('canvas');
+  canvas.width = cols;
+  canvas.height = rows;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'medium';
+  ctx.drawImage(imgOrCanvas, 0, 0, cols, rows);
+  return ctx.getImageData(0, 0, cols, rows);
+}
+
+function stopWebcam() {
+  webcamActive = false;
+  if (webcamAnimId) cancelAnimationFrame(webcamAnimId);
+  if (webcamStream) webcamStream.getTracks().forEach(t => t.stop());
+  webcamStream = null;
+  videoEl.style.display = 'none';
+  videoEl.srcObject = null;
+  document.getElementById('btn-webcam').textContent = '◉ 웹캠 시작';
+  document.getElementById('btn-webcam').classList.remove('active');
+}
+
+// ── Export ─────────────────────────────────────────────
+async function copyText() {
+  if (!currentAsciiText) return showToast('변환된 이미지가 없습니다');
+  await navigator.clipboard.writeText(currentAsciiText);
+  showToast('텍스트 복사 완료');
+}
+
+async function copyHtml() {
+  if (!currentColorData) return showToast('변환된 이미지가 없습니다');
+  const html = buildColorHtml(currentColorData);
+  try {
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        'text/html': new Blob([html], { type: 'text/html' }),
+        'text/plain': new Blob([currentAsciiText], { type: 'text/plain' })
+      })
+    ]);
+    showToast('컬러 HTML 복사 완료');
+  } catch {
+    await navigator.clipboard.writeText(currentAsciiText);
+    showToast('텍스트로 복사 (브라우저 제한)');
+  }
+}
+
+function buildColorHtml(colorRows) {
+  const lines = colorRows.map(({ chars, colors }) =>
+    chars.map((ch, i) => {
+      const [r, g, b] = colors[i];
+      return `<span style="color:rgb(${r},${g},${b})">${escapeHtml(ch)}</span>`;
+    }).join('')
+  ).join('\n');
+  return `<pre style="font-family:'Courier New',monospace;line-height:1.15;font-size:9px;background:#000;margin:0">${lines}</pre>`;
+}
+
+function exportThermal(preset) {
+  if (!currentAsciiText) return showToast('변환된 이미지가 없습니다');
+
+  const { printablePx, cols, label } = THERMAL_PRESETS[preset];
+
+  // Re-convert with thermal cols
+  let text = currentAsciiText;
+  if (currentImageEl) {
+    const { rows } = calcDimensions(currentImageEl.naturalWidth, currentImageEl.naturalHeight, cols);
+    const imageData = resizeImageData(currentImageEl, cols, rows);
+    const { text: t } = imageDataToAscii(imageData, cols, rows, selCharset.value, chkInvert.checked, parseInt(rngBrightness.value), parseInt(rngContrast.value));
+    text = t;
+  }
+
+  const lines = text.split('\n');
+  const fontSize = 8;
+  const lineHeight = 11;
+  const padding = 12;
+
+  const canvasW = printablePx;
+  const canvasH = lines.length * lineHeight + padding * 2;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = canvasW;
+  canvas.height = canvasH;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, canvasW, canvasH);
+
+  ctx.fillStyle = '#000000';
+  ctx.font = `${fontSize}pt "Courier New", monospace`;
+  ctx.textBaseline = 'top';
+
+  lines.forEach((line, i) => {
+    ctx.fillText(line, padding, padding + i * lineHeight);
+  });
+
+  // threshold binarization
+  const imgData = ctx.getImageData(0, 0, canvasW, canvasH);
+  const d = imgData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const lum = getLuminance(d[i], d[i+1], d[i+2]);
+    const val = lum > 128 ? 255 : 0;
+    d[i] = d[i+1] = d[i+2] = val;
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = `ascii-sticker-${label}.png`;
+  a.click();
+  showToast(`${label} PNG 저장`);
+}
+
+// ── Toast ──────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+}
+
+// ── Zoom ───────────────────────────────────────────────
+document.getElementById('btn-zoom-in').addEventListener('click', () => {
+  fontSize = Math.min(20, fontSize + 1);
+  output.style.fontSize = fontSize + 'px';
+});
+document.getElementById('btn-zoom-out').addEventListener('click', () => {
+  fontSize = Math.max(4, fontSize - 1);
+  output.style.fontSize = fontSize + 'px';
+});
+document.getElementById('btn-zoom-reset').addEventListener('click', () => {
+  fontSize = 9;
+  output.style.fontSize = fontSize + 'px';
+});
+
+// ── Settings change ────────────────────────────────────
+function reconvert() {
+  if (webcamActive) return; // webcam loop handles it
+  if (currentImageEl) convert(currentImageEl);
+}
+
+selCols.addEventListener('change', reconvert);
+selCharset.addEventListener('change', reconvert);
+chkInvert.addEventListener('change', reconvert);
+rngBrightness.addEventListener('input', () => {
+  document.getElementById('brightness-val').textContent = rngBrightness.value;
+  reconvert();
+});
+rngContrast.addEventListener('input', () => {
+  document.getElementById('contrast-val').textContent = rngContrast.value;
+  reconvert();
+});
+chkColor.addEventListener('change', () => {
+  if (!currentAsciiText) return;
+  if (chkColor.checked && currentColorData) renderColor(currentColorData);
+  else if (currentAsciiText) renderText(currentAsciiText);
+  document.getElementById('stat-mode').textContent = 'mode: ' + (chkColor.checked ? 'color' : 'text');
+});
+
+// ── Upload ─────────────────────────────────────────────
+document.getElementById('btn-upload').addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => loadImageFile(e.target.files[0]));
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  loadImageFile(e.dataTransfer.files[0]);
+});
+
+// Also allow dropping anywhere
+document.body.addEventListener('dragover', (e) => e.preventDefault());
+document.body.addEventListener('drop', (e) => {
+  e.preventDefault();
+  if (e.dataTransfer.files[0]) loadImageFile(e.dataTransfer.files[0]);
+});
+
+// ── Webcam ─────────────────────────────────────────────
+document.getElementById('btn-webcam').addEventListener('click', () => {
+  if (webcamActive) stopWebcam();
+  else startWebcam();
+});
+
+// ── Export buttons ─────────────────────────────────────
+document.getElementById('btn-copy-text').addEventListener('click', copyText);
+document.getElementById('btn-copy-html').addEventListener('click', copyHtml);
+document.getElementById('btn-58mm').addEventListener('click', () => exportThermal('58mm'));
+document.getElementById('btn-80mm').addEventListener('click', () => exportThermal('80mm'));
+
+// ── Caption ────────────────────────────────────────────
+const captionInput   = document.getElementById('caption-input');
+const captionDisplay = document.getElementById('caption-display');
+let captionAlign = 'left';
+
+captionInput.addEventListener('input', updateCaption);
+
+document.getElementById('align-left').addEventListener('click', () => setAlign('left'));
+document.getElementById('align-center').addEventListener('click', () => setAlign('center'));
+document.getElementById('align-right').addEventListener('click', () => setAlign('right'));
+
+function setAlign(dir) {
+  captionAlign = dir;
+  document.querySelectorAll('.align-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('align-' + dir).classList.add('active');
+  updateCaption();
+}
+
+function updateCaption() {
+  const val = captionInput.value;
+  if (!val.trim()) {
+    captionDisplay.classList.remove('has-text');
+    captionDisplay.textContent = '';
+    return;
+  }
+  captionDisplay.classList.add('has-text');
+  captionDisplay.style.textAlign = captionAlign;
+  captionDisplay.textContent = val;
+}
+
+// ── Paste image from clipboard ─────────────────────────
+document.addEventListener('paste', (e) => {
+  const item = Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'));
+  if (item) loadImageFile(item.getAsFile());
+});
+</script>
+</body>
+</html>
